@@ -10,7 +10,8 @@
  *       el: '#booking',
  *       endpoint: 'https://script.google.com/macros/s/XXXX/exec', // or 'mock'
  *       lang: 'de',            // 'de' | 'en'
- *       accent: '#fcba01'      // brand color
+ *       accent: '#fcba01',     // brand color
+ *       staff: [{ id: 'ahmed', name: 'Ahmed' }]  // optional — adds a barber/staff step
  *     });
  *   </script>
  */
@@ -21,6 +22,8 @@
   var I18N = {
     de: {
       chooseService: 'Was möchtest du buchen?',
+      chooseStaff: 'Wer soll dich übernehmen?',
+      noPreference: 'Keine Präferenz',
       chooseTime: 'Wähle Datum & Uhrzeit',
       yourDetails: 'Deine Kontaktdaten',
       minutes: 'Min.',
@@ -47,6 +50,8 @@
     },
     en: {
       chooseService: 'What would you like to book?',
+      chooseStaff: 'Who should take care of you?',
+      noPreference: 'No preference',
       chooseTime: 'Pick a date & time',
       yourDetails: 'Your details',
       minutes: 'min',
@@ -88,7 +93,7 @@
   '.cbw-svc{display:flex;flex-direction:column;gap:8px}' +
   '.cbw-svc button{display:flex;justify-content:space-between;align-items:center;gap:10px;' +
     'padding:13px 15px;border:1.5px solid var(--cbw-line);border-radius:11px;background:var(--cbw-bg);' +
-    'font:inherit;font-size:15px;cursor:pointer;text-align:left;transition:border-color .15s,background .15s}' +
+    'font:inherit;font-size:15px;cursor:pointer;text-align:left;color:var(--cbw-ink);transition:border-color .15s,background .15s}' +
   '.cbw-svc button:hover{border-color:var(--cbw-accent);background:var(--cbw-soft)}' +
   '.cbw-svc small{color:var(--cbw-mut);white-space:nowrap}' +
   '.cbw-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}' +
@@ -106,7 +111,7 @@
   '.cbw-slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:7px;' +
     'max-height:180px;overflow-y:auto;padding:2px}' +
   '.cbw-slots button{padding:9px 0;border:1.5px solid var(--cbw-line);border-radius:9px;' +
-    'background:var(--cbw-bg);font:inherit;font-size:13.5px;cursor:pointer;transition:all .12s}' +
+    'background:var(--cbw-bg);font:inherit;font-size:13.5px;cursor:pointer;color:var(--cbw-ink);transition:all .12s}' +
   '.cbw-slots button:hover{border-color:var(--cbw-accent)}' +
   '.cbw-slots button.sel{background:var(--cbw-accent);border-color:var(--cbw-accent);font-weight:650}' +
   '.cbw-hint{color:var(--cbw-mut);font-size:13.5px;padding:10px 2px}' +
@@ -197,13 +202,15 @@
     var lang = cfg.lang === 'en' ? 'en' : 'de';
     var t = I18N[lang];
     var mock = cfg.endpoint === 'mock';
+    var hasStaff = !!(cfg.staff && cfg.staff.length);
+    var totalSteps = hasStaff ? 4 : 3;
 
     var box = el('div', 'cbw');
     if (cfg.accent) box.style.setProperty('--cbw-accent', cfg.accent);
     root.appendChild(box);
 
     var state = {
-      remote: null, service: null, date: null, time: null,
+      remote: null, service: null, staff: null, date: null, time: null,
       monthCursor: startOfMonth(new Date()), slots: null, loadingSlots: false,
       pendingService: null
     };
@@ -228,7 +235,7 @@
     /* steps indicator */
     function steps(n) {
       var w = el('div', 'cbw-steps');
-      for (var i = 1; i <= 3; i++) w.appendChild(el('i', i <= n ? 'on' : ''));
+      for (var i = 1; i <= totalSteps; i++) w.appendChild(el('i', i <= n ? 'on' : ''));
       return w;
     }
     function view() {
@@ -244,8 +251,8 @@
       if (!state.remote) { state.pendingService = id; return; } // config not loaded yet
       var matches = state.remote.services.filter(function (s) { return s.id === id; });
       if (!matches.length) { renderServices(); return; } // no match → just show the normal list
-      state.service = matches[0]; state.date = null; state.time = null; state.slots = null;
-      renderCalendar();
+      state.service = matches[0]; state.staff = null; state.date = null; state.time = null; state.slots = null;
+      hasStaff ? renderStaff() : renderCalendar();
     }
 
     /* step 1: services */
@@ -259,18 +266,45 @@
         b.appendChild(el('span', null, s.name));
         b.appendChild(el('small', null, s.duration + ' ' + t.minutes));
         b.onclick = function () {
-          state.service = s; state.date = null; state.time = null; state.slots = null;
-          renderCalendar();
+          state.service = s; state.staff = null; state.date = null; state.time = null; state.slots = null;
+          hasStaff ? renderStaff() : renderCalendar();
         };
         list.appendChild(b);
       });
       v.appendChild(list);
     }
 
-    /* persistent summary — grows as service/date/time get picked, shown from step 2 onward */
+    /* step 2 (only when cfg.staff given): pick a barber, or no preference */
+    function renderStaff() {
+      var v = view();
+      v.appendChild(steps(2));
+      v.appendChild(el('h3', null, t.chooseStaff));
+      var sum = summaryBar();
+      if (sum) v.appendChild(sum);
+      var list = el('div', 'cbw-svc');
+      var none = el('button');
+      none.appendChild(el('span', null, t.noPreference));
+      none.onclick = function () { state.staff = null; renderCalendar(); };
+      list.appendChild(none);
+      cfg.staff.forEach(function (s) {
+        var b = el('button');
+        b.appendChild(el('span', null, s.name));
+        b.onclick = function () { state.staff = s; renderCalendar(); };
+        list.appendChild(b);
+      });
+      v.appendChild(list);
+      var row = el('div', 'cbw-row');
+      var back = el('button', 'cbw-btn', t.back);
+      back.onclick = renderServices;
+      row.appendChild(back);
+      v.appendChild(row);
+    }
+
+    /* persistent summary — grows as service/staff/date/time get picked, shown from step 2 onward */
     function summaryBar() {
       if (!state.service) return null;
       var parts = [state.service.name];
+      if (state.staff) parts.push(state.staff.name);
       if (state.date) parts.push(niceDate(state.date, lang));
       if (state.time) parts.push(state.time + (lang === 'de' ? ' ' + t.oclock : ''));
       return el('div', 'cbw-sum', parts.join(' · '));
@@ -287,7 +321,7 @@
 
     function renderCalendar() {
       var v = view();
-      v.appendChild(steps(2));
+      v.appendChild(steps(hasStaff ? 3 : 2));
       v.appendChild(el('h3', null, t.chooseTime));
       var sum = summaryBar();
       if (sum) v.appendChild(sum);
@@ -343,7 +377,7 @@
 
       var row = el('div', 'cbw-row');
       var back = el('button', 'cbw-btn', t.back);
-      back.onclick = renderServices;
+      back.onclick = hasStaff ? renderStaff : renderServices;
       row.appendChild(back);
       v.appendChild(row);
     }
@@ -365,7 +399,7 @@
     /* step 3: details form */
     function renderForm() {
       var v = view();
-      v.appendChild(steps(3));
+      v.appendChild(steps(hasStaff ? 4 : 3));
       v.appendChild(el('h3', null, t.yourDetails));
       var sum = summaryBar();
       if (sum) v.appendChild(sum);
@@ -404,7 +438,8 @@
         submit.disabled = back.disabled = true;
         submit.textContent = t.booking;
         api(null, null, {
-          service: state.service.id, date: state.date, time: state.time,
+          service: state.service.id, staff: state.staff ? state.staff.id : null,
+          date: state.date, time: state.time,
           name: name, email: email,
           phone: fPhone.value.trim(), note: fNote.value.trim(), lang: lang
         }).then(function (r) {
@@ -431,7 +466,7 @@
       var again = el('button', 'cbw-btn', t.again);
       again.style.marginTop = '16px';
       again.onclick = function () {
-        state.service = state.date = state.time = state.slots = null;
+        state.service = state.staff = state.date = state.time = state.slots = null;
         renderServices();
       };
       d.appendChild(again);

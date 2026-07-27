@@ -19,6 +19,9 @@
      Gästestimmen ersetzen — Rating 5,0 / 111 Bewertungen stammt von Planity und sollte gegen
      das echte Google-Profil geprüft werden, bevor es als Rich-Snippet ausgezeichnet wird.
   4) Fotos vom Laden/Team ergänzen (aktuell nur Initialen-Kacheln).
+  5) Mitarbeiter-Auswahl im Booking-Widget ist aktiv (Ahmed/Saher/Ali + "Keine Präferenz").
+     Sobald das echte Backend dran ist, muss es das Feld "staff" aus dem Buchungs-Payload
+     auswerten (leer = keine Präferenz) und pro Mitarbeiter eigene Verfügbarkeit liefern.
 -->
 <script type="application/ld+json">
 {
@@ -414,7 +417,12 @@ footer.site{background:var(--bg-deep);padding:56px 0 30px;border-top:1px solid v
     el: '#booking-widget-mount',
     endpoint: 'mock', // TODO: echte Google-Apps-Script-URL einsetzen
     lang: 'de',
-    accent: '#3568FF'
+    accent: '#3568FF',
+    staff: [
+      { id: 'ahmed', name: 'Ahmed' },
+      { id: 'saher', name: 'Saher' },
+      { id: 'ali',   name: 'Ali' }
+    ]
   });
 
   // service rows jump straight into the booking flow with that service pre-selected
