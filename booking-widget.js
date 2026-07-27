@@ -159,10 +159,18 @@
   }
 
   /* ───────── mock backend for demos ───────── */
+  // Single source of truth for opening hours: 0=So … 6=Sa, [open, close] as whole hours, or null if closed.
+  var WEEKLY_HOURS = { 0: null, 1: [8, 20], 2: [8, 20], 3: [8, 20], 4: [8, 20], 5: [8, 20], 6: [8, 17] };
+
   function mockApi(action, params) {
     return new Promise(function (res) {
       setTimeout(function () {
         if (action === 'config') {
+          var hours = {};
+          Object.keys(WEEKLY_HOURS).forEach(function (d) {
+            var r = WEEKLY_HOURS[d];
+            hours[d] = r ? [String(r[0]).padStart(2, '0') + ':00-' + String(r[1]).padStart(2, '0') + ':00'] : [];
+          });
           res({
             businessName: 'Blue Barbershop',
             services: [
@@ -172,18 +180,17 @@
               { id: 'maschine', name: 'Komplett mit der Maschine · 15 €',      duration: 30 },
               { id: 'kontur',   name: 'Bartkontur mit dem Messer · 13 €',      duration: 30 }
             ],
-            // Mo–Fr 08–20, Sa 08–17, So geschlossen
-            hours: { 0: [], 1: ['08:00-20:00'], 2: ['08:00-20:00'], 3: ['08:00-20:00'],
-                     4: ['08:00-20:00'], 5: ['08:00-20:00'], 6: ['08:00-17:00'] },
+            hours: hours,
             maxAdvanceDays: 60, minNoticeHours: 6
           });
         } else if (action === 'slots') {
           var day = new Date(params.date + 'T12:00:00').getDay();
-          if (day === 0) return res({ slots: [] }); // Sonntag geschlossen
-          var all = day === 6
-            ? ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00']
-            : ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00'];
-          // pseudo-random availability per date
+          var range = WEEKLY_HOURS[day];
+          if (!range) return res({ slots: [] }); // geschlossen
+          var all = [];
+          // last full-hour slot starts one hour before closing, so a 1h service still fits
+          for (var h = range[0]; h < range[1]; h++) all.push(String(h).padStart(2, '0') + ':00');
+          // pseudo-random availability per date, purely for demo realism
           var seed = params.date.split('-').join('') % 7;
           res({ slots: all.filter(function (_, i) { return (i + seed) % 3 !== 0; }) });
         } else {
