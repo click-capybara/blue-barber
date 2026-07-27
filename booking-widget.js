@@ -11,7 +11,7 @@
  *       endpoint: 'https://script.google.com/macros/s/XXXX/exec', // or 'mock'
  *       lang: 'de',            // 'de' | 'en'
  *       accent: '#fcba01',     // brand color
- *       staff: [{ id: 'ahmed', name: 'Ahmed' }]  // optional — adds a barber/staff step
+ *       staff: [{ id: 'ahmed', name: 'Ahmed', photo: 'url' }]  // optional — adds a barber/staff step, photo optional (falls back to initial)
  *     });
  *   </script>
  */
@@ -96,6 +96,12 @@
     'font:inherit;font-size:15px;cursor:pointer;text-align:left;color:var(--cbw-ink);transition:border-color .15s,background .15s}' +
   '.cbw-svc button:hover{border-color:var(--cbw-accent);background:var(--cbw-soft)}' +
   '.cbw-svc small{color:var(--cbw-mut);white-space:nowrap}' +
+  '.cbw-svc-inner{display:flex;align-items:center;gap:11px;min-width:0}' +
+  '.cbw-avatar{width:32px;height:32px;border-radius:50%;background:var(--cbw-accent);color:#fff;' +
+    'font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;' +
+    'flex-shrink:0;overflow:hidden}' +
+  '.cbw-avatar.muted{background:var(--cbw-soft);color:var(--cbw-mut)}' +
+  '.cbw-avatar img{width:100%;height:100%;object-fit:cover;display:block}' +
   '.cbw-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}' +
   '.cbw-cal-head b{font-size:14.5px}' +
   '.cbw-nav{border:none;background:var(--cbw-soft);border-radius:8px;width:30px;height:30px;' +
@@ -147,6 +153,17 @@
     if (cls) n.className = cls;
     if (text != null) n.textContent = text;
     return n;
+  }
+  function avatarEl(person, muted) {
+    var a = el('div', muted ? 'cbw-avatar muted' : 'cbw-avatar');
+    if (person.photo) {
+      var img = document.createElement('img');
+      img.src = person.photo; img.alt = '';
+      a.appendChild(img);
+    } else {
+      a.textContent = muted ? '–' : (person.name || '?').trim().charAt(0).toUpperCase();
+    }
+    return a;
   }
   function iso(d) {
     return d.getFullYear() + '-' +
@@ -290,12 +307,18 @@
       if (sum) v.appendChild(sum);
       var list = el('div', 'cbw-svc');
       var none = el('button');
-      none.appendChild(el('span', null, t.noPreference));
+      var noneInner = el('div', 'cbw-svc-inner');
+      noneInner.appendChild(avatarEl({ name: t.noPreference }, true));
+      noneInner.appendChild(el('span', null, t.noPreference));
+      none.appendChild(noneInner);
       none.onclick = function () { state.staff = null; renderCalendar(); };
       list.appendChild(none);
       cfg.staff.forEach(function (s) {
         var b = el('button');
-        b.appendChild(el('span', null, s.name));
+        var inner = el('div', 'cbw-svc-inner');
+        inner.appendChild(avatarEl(s));
+        inner.appendChild(el('span', null, s.name));
+        b.appendChild(inner);
         b.onclick = function () { state.staff = s; renderCalendar(); };
         list.appendChild(b);
       });

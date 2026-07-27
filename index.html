@@ -22,6 +22,11 @@
   5) Mitarbeiter-Auswahl im Booking-Widget ist aktiv (Ahmed/Saher/Ali + "Keine Präferenz").
      Sobald das echte Backend dran ist, muss es das Feld "staff" aus dem Buchungs-Payload
      auswerten (leer = keine Präferenz) und pro Mitarbeiter eigene Verfügbarkeit liefern.
+     Fotos: aktuell Initialen-Platzhalter — echtes Foto einfach als "photo"-URL pro Person
+     in der staff-Konfiguration in index.html ergänzen.
+  6) Die eingebettete Google-Karte unter "Route öffnen" nutzt den kostenlosen Embed-Trick
+     ohne API-Key (maps.google.com/maps?...&output=embed). Läuft zuverlässig für eine Demo,
+     für den Live-Betrieb empfiehlt Google offiziell die Maps Embed API mit eigenem Key.
 -->
 <script type="application/ld+json">
 {
@@ -188,6 +193,8 @@ h1 .cut{color:var(--blue)}
 .contact-card{background:var(--bg-lift);border:1px solid var(--line);border-radius:10px;padding:26px;margin-top:24px}
 .contact-card p{margin-bottom:10px;font-size:15px}
 .contact-card a.route{color:var(--blue);font-weight:600;font-size:14px}
+.map-embed{margin-top:18px;border-radius:8px;overflow:hidden;border:1px solid var(--line);aspect-ratio:16/10;background:var(--bg)}
+.map-embed iframe{width:100%;height:100%;border:0;display:block}
 
 /* ══ REVIEWS ══ */
 .rev-head{display:flex;align-items:baseline;gap:16px;margin-bottom:40px;flex-wrap:wrap}
@@ -350,6 +357,13 @@ footer.site{background:var(--bg-deep);padding:56px 0 30px;border-top:1px solid v
     <div class="contact-card">
       <p><b>Blue Barbershop</b><br>Liebigstraße 1a<br>40479 Düsseldorf</p>
       <a class="route" href="https://maps.google.com/?q=Liebigstra%C3%9Fe+1a,+40479+D%C3%BCsseldorf" target="_blank" rel="noopener">Route öffnen →</a>
+      <div class="map-embed">
+        <iframe
+          src="https://www.google.com/maps?q=Liebigstra%C3%9Fe+1a,+40479+D%C3%BCsseldorf&output=embed"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          title="Karte: Blue Barbershop, Liebigstraße 1a, Düsseldorf"></iframe>
+      </div>
     </div>
   </div>
 </section>
